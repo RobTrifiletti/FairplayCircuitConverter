@@ -19,7 +19,6 @@ import java.util.List;
  */
 public class CircuitSorter implements Runnable {
 
-	private static final int NOT_FOUND = -1;
 	private Charset charset;
 	private File inputFile;
 	private File outputFile;
@@ -46,12 +45,14 @@ public class CircuitSorter implements Runnable {
 		long startTime = System.currentTimeMillis();
 		List<Gate> gates = getParsedGates(inputFile, charset);
 
-		List<Gate> sortedLeft = getSortedGates(gates,
-				new WireComparator(WireSortEnum.LEFT));
-		List<Gate> sortedRight = getSortedGates(gates,
-				new WireComparator(WireSortEnum.RIGHT));
+		MultiHashMap leftMap = new MultiHashMap();
+		MultiHashMap rightMap = new MultiHashMap();
+		for(Gate g: gates){
+			leftMap.put(g.getLeftWireIndex(), g);
+			rightMap.put(g.getRightWireIndex(), g);
+		}
 
-		List<List<Gate>> multiTimedGates = getTimestampedGates(sortedLeft, sortedRight);
+		List<List<Gate>> multiTimedGates = getTimestampedGates(leftMap, rightMap);
 
 		outputSortedGates(multiTimedGates);
 		System.out.println("Took: " + ((System.currentTimeMillis() - startTime) / 1000)
@@ -115,37 +116,39 @@ public class CircuitSorter implements Runnable {
 		return res;
 	}
 
-
-	/**
-	 * @param gates
-	 * @param wireComparator
-	 * @return
-	 */
-	private List<Gate> getSortedGates(List<Gate> gates, WireComparator wireComparator) {
-		Collections.sort(gates, wireComparator);
-		return gates;
-	}
-
 	/**
 	 * @param sortedLeft
 	 * @param sortedRight
 	 * @return
 	 */
-	private List<List<Gate>> getTimestampedGates(List<Gate> sortedLeft,
-			List<Gate> sortedRight) {
+	private List<List<Gate>> getTimestampedGates(MultiHashMap leftMap,
+			MultiHashMap rightMap) {
 		List<List<Gate>> multiTimedGates = new ArrayList<List<Gate>>();
 
-		for(Gate g: sortedLeft){
-			if (g.getLeftWireIndex() < 256){
-				evalGate(g, 0, sortedLeft, multiTimedGates);
+		int j = 0;
+		for(int i = 0; i < 256; i++){
+			List<Gate> leftList = leftMap.get(i);
+			if(leftList == null){
+				continue;
 			}
-			else continue;
+			for(Gate g: leftList){
+				j++;
+				System.out.println(j);
+				evalGate(g, 0, leftMap, rightMap, multiTimedGates);
+			}
 		}
-		for(Gate g: sortedRight){
-			if (g.getRightWireIndex() < 256){
-				evalGate(g, 0, sortedRight, multiTimedGates);
+		System.out.println("-------");
+		int k = 0;
+		for(int i = 0; i < 256; i++){
+			List<Gate> rightList = rightMap.get(i);
+			if(rightList == null){
+				continue;
 			}
-			else continue;
+			for(Gate g: rightList){
+				k++;
+				System.out.println(k);
+				evalGate(g, 0, leftMap, rightMap, multiTimedGates);
+			}
 		}
 		return multiTimedGates;
 	}
@@ -156,34 +159,40 @@ public class CircuitSorter implements Runnable {
 	 * @param list
 	 * @param multiTimedGates
 	 */
-	private void evalGate(Gate g, int time, List<Gate> list,
+	private void evalGate(Gate g, int time, MultiHashMap leftMap, MultiHashMap rightMap,
 			List<List<Gate>> multiTimedGates) {
 		g.decCounter();
 		if (g.getCounter() == 0){
 			g.setTime(time);
 			addToSublist(g, multiTimedGates);
-			List<Gate> outputGates = getOutputGates(g, list);
+			List<Gate> outputGates = getOutputGates(g, leftMap, rightMap);
 
 			for(Gate outputGate: outputGates){
-				evalGate(outputGate, time + 1, list, multiTimedGates);
+				evalGate(outputGate, time + 1, leftMap, rightMap, multiTimedGates);
 			}
-		}	
+		} 
 	}
-	
+
 	/**
 	 * @param g
 	 * @param sortedList
 	 * @return
 	 */
-	private List<Gate> getOutputGates(Gate g, List<Gate> sortedList){
+	private List<Gate> getOutputGates(Gate g, MultiHashMap leftMap, 
+			MultiHashMap rightMap){
 		List<Gate> res = new ArrayList<Gate>();
-		for(Gate candidateGate: sortedList){
-			int outputIndex = g.getOutputWireIndex();
-			if (outputIndex == candidateGate.getLeftWireIndex()
-					|| outputIndex == candidateGate.getRightWireIndex()){
-				res.add(candidateGate);
-			}
+		int inputIndex = g.getOutputWireIndex();
+		List<Gate> leftList = leftMap.get(inputIndex);
+		List<Gate> rightList = rightMap.get(inputIndex);
+
+		if (leftList != null){
+			res.addAll(leftList);
 		}
+
+		if (rightList != null){
+			res.addAll(rightList);
+		}
+
 		return res;
 	}
 
@@ -284,33 +293,33 @@ public class CircuitSorter implements Runnable {
 	}
 
 
-/**
- * @param args
- */
-public static void main(String[] args) {
-	if(args.length < 1){
-		System.out.println("Incorrect number of arguments, please specify inputfile");
-		return;
-	}
-
-	String inputfileName = null, outputfileName = null;
-
-	for(int param = 0; param < args.length; param++){
-		if (inputfileName == null) {
-			inputfileName = args[param];
+	/**
+	 * @param args
+	 */
+	public static void main(String[] args) {
+		if(args.length < 1){
+			System.out.println("Incorrect number of arguments, please specify inputfile");
+			return;
 		}
 
-		else if (outputfileName == null) {
-			outputfileName = args[param];
+		String inputfileName = null, outputfileName = null;
+
+		for(int param = 0; param < args.length; param++){
+			if (inputfileName == null) {
+				inputfileName = args[param];
+			}
+
+			else if (outputfileName == null) {
+				outputfileName = args[param];
+			}
+
+			else System.out.println("Unparsed: " + args[param]); 
+		}
+		if(outputfileName == null) {
+			outputfileName = "out.txt";
 		}
 
-		else System.out.println("Unparsed: " + args[param]); 
+		CircuitSorter sorter = new CircuitSorter(inputfileName, outputfileName);
+		sorter.run();
 	}
-	if(outputfileName == null) {
-		outputfileName = "out.txt";
-	}
-
-	CircuitSorter sorter = new CircuitSorter(inputfileName, outputfileName);
-	sorter.run();
-}
 }
