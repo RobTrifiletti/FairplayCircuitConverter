@@ -21,12 +21,12 @@ public class CircuitSorter implements Runnable {
 	private List<Gate> gates;
 	private List<List<Gate>> multiTimedGates;
 
-	private int numberOfGates = 0;
-	private int numberOfWires = 0;
+	//	private int numberOfGates = 0;
+	//	private int numberOfWires = 0;
 	private int numberOfAliceInputs = 0;
 	private int numberOfBobInputs = 0;
-	private int numberOfAliceOutputs = 0;
-	private int numberOfBobOutputs = 0;
+	//	private int numberOfAliceOutputs = 0;
+	//	private int numberOfBobOutputs = 0;
 	private int numberOfNonXORGates = 0;
 
 	public CircuitSorter(String inputfileName, String outputfileName) {
@@ -52,7 +52,7 @@ public class CircuitSorter implements Runnable {
 		System.out.println("Took: " + ((System.currentTimeMillis() - startTime) / 1000)
 				+ " sec");
 	}
-	
+
 	private List<Gate> parseFile(File inputFile, Charset charset) {
 		boolean counter = false;
 		ArrayList<Gate> res = new ArrayList<Gate>();
@@ -65,9 +65,9 @@ public class CircuitSorter implements Runnable {
 					continue;
 				}
 				if(line.matches("[0-9]* [0-9]*")){
-					String[] split = line.split(" ");
-					numberOfGates = Integer.parseInt(split[0]);
-					numberOfWires = Integer.parseInt(split[1]);
+					//					String[] split = line.split(" ");
+					//					numberOfGates = Integer.parseInt(split[0]);
+					//					numberOfWires = Integer.parseInt(split[1]);
 					counter = true;
 					continue;
 				}
@@ -75,8 +75,8 @@ public class CircuitSorter implements Runnable {
 					String[] split = line.split(" ");
 					numberOfAliceInputs = Integer.parseInt(split[0]);
 					numberOfBobInputs = Integer.parseInt(split[1]);
-					numberOfAliceOutputs = Integer.parseInt(split[4]);
-					numberOfBobOutputs = Integer.parseInt(split[5]);
+					//					numberOfAliceOutputs = Integer.parseInt(split[4]);
+					//					numberOfBobOutputs = Integer.parseInt(split[5]);
 
 					counter = false;
 					continue;
@@ -95,13 +95,13 @@ public class CircuitSorter implements Runnable {
 
 		return res;
 	}
-	
+
 
 	private List<Gate> sortGates(List<Gate> gates, WireComparator wireComparator) {
 		Collections.sort(gates, wireComparator);
 		return gates;
 	}
-	
+
 	private void runThroughGates(List<Gate> sortedLeft, List<Gate> sortedRight) {
 		for(Gate g: sortedLeft){
 			if (g.getLeftWireIndex() < 256){
@@ -140,27 +140,36 @@ public class CircuitSorter implements Runnable {
 			int numberOfTotalOutputs = numberOfTotalInputs/2;
 			int numberOfWires = getNumberOfWires(multiTimedGates);
 			int numberOfLayers = multiTimedGates.size();
-			
+
 			int maxLayerWidth = 0;
-			
-			// Have to figure out the max layer size before writing the file
+
+			/*
+			 * We have to figure out the max layer size before writing to the file.
+			 */
 			for(List<Gate> l: multiTimedGates){
 				maxLayerWidth = Math.max(maxLayerWidth, l.size());
 			}
+
+			/*
+			 * Build and write the header of the output file
+			 */
 			String header = numberOfTotalInputs + " " + numberOfTotalOutputs + " " +
 					numberOfWires + " " + numberOfLayers + " " + maxLayerWidth +
 					" " + numberOfNonXORGates;
-			
 			fbw.write(header);
 			fbw.newLine();
-			
+
+			/*
+			 * Write the gates the the file, one layer at a time
+			 */
 			for(List<Gate> l: multiTimedGates){
-				fbw.write("*" + l.size()); // #GatesInCurrentLayer
-				
+				// Write the size of the current layer
+				fbw.write("*" + l.size()); 
 				fbw.newLine();
+
+				// Write the gates in this layer
 				for(Gate g: l){
 					String gateString = multiTimedGates.indexOf(l) + " " + g.toString();
-
 					fbw.write(gateString);
 					fbw.newLine();
 				}
@@ -187,7 +196,7 @@ public class CircuitSorter implements Runnable {
 				hs.add(g.getOutputWireIndex());
 			}
 		}
-		
+
 		return hs.size();
 	}
 
