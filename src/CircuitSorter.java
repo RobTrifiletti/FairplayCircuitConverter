@@ -135,14 +135,22 @@ public class CircuitSorter implements Runnable {
 			List<Gate> sortedRight) {
 		List<List<Gate>> multiTimedGates = new ArrayList<List<Gate>>();
 
+		int i = 0;
 		for(Gate g: sortedLeft){
 			if (g.getLeftWireIndex() < 256){
+				i++;
+				System.out.println(i);
 				evalGate(g, 0, sortedLeft, multiTimedGates);
 			}
+			
 			else continue;
 		}
+		System.out.println("-------------");
+		int j = 0;
 		for(Gate g: sortedRight){
-			if (g.getRightWireIndex() < 256){
+			if (g.getRightWireIndex() < 256){	
+				j++;
+				System.out.println(j);
 				evalGate(g, 0, sortedRight, multiTimedGates);
 			}
 			else continue;
