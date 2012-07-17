@@ -19,7 +19,6 @@ public class CircuitSorter implements Runnable {
 	private File inputFile;
 	private File outputFile;
 	private List<Gate> gates;
-//	private List<Gate> timedGates;
 	private List<List<Gate>> multiTimedGates;
 
 	private int numberOfGates = 0;
@@ -128,7 +127,6 @@ public class CircuitSorter implements Runnable {
 				evalGate(outputGate, time + 1, list);
 			}
 		}
-
 	}
 
 
@@ -167,13 +165,7 @@ public class CircuitSorter implements Runnable {
 					fbw.newLine();
 				}
 			}
-//			RandomAccessFile file = new RandomAccessFile("out.txt", "rws");
-//		    byte[] text = new byte[(int) file.length()];
-//		    file.readFully(text);
-//		    file.seek(0);
-//		    file.writeBytes(header);
-//		    file.write(text);
-//		    file.close();
+
 		} catch (IOException e) {
 			e.printStackTrace();
 		} finally { 
