@@ -50,7 +50,7 @@ public class Gate {
 	}
 
 	public void setTime(int time){
-		this.time = Math.max(this.time, time);
+		this.time = time;
 	}
 	
 	public String getGate(){

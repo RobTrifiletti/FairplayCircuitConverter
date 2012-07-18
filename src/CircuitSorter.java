@@ -8,8 +8,11 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+
+import org.apache.commons.collections.map.MultiValueMap;
 
 
 /**
@@ -26,8 +29,8 @@ public class CircuitSorter implements Runnable {
 	private int numberOfBobInputs = 0;
 	private int numberOfNonXORGates = 0;
 
-	private MultiHashMap leftMap;
-	private MultiHashMap rightMap;
+	private MultiValueMap leftMap;
+	private MultiValueMap rightMap;
 
 	/**
 	 * @param inputfileName
@@ -37,15 +40,22 @@ public class CircuitSorter implements Runnable {
 		this.inputFile = inputFile;
 		this.outputFile = outputFile;
 		charset = Charset.defaultCharset();
-		leftMap = new MultiHashMap();
-		rightMap = new MultiHashMap();
+		leftMap = new MultiValueMap();
+		rightMap = new MultiValueMap();
 	}
 
 	public void run() {
 		long startTime = System.currentTimeMillis();
 		List<Gate> gates = getParsedGates();
+		System.out.println(gates.size());
+		
 
 		List<List<Gate>> layersOfGates = getLayersOfGates(gates);
+		int i = 0;
+		for(List<Gate> list: layersOfGates){
+			i = i + list.size();
+		}
+		System.out.println(i);
 
 		outputSortedGates(layersOfGates);
 		System.out.println("Took: " + ((System.currentTimeMillis() - startTime) / 1000)
@@ -121,30 +131,34 @@ public class CircuitSorter implements Runnable {
 			leftMap.put(g.getLeftWireIndex(), g);
 			rightMap.put(g.getRightWireIndex(), g);
 		}
+		System.out.println(leftMap.values().size());
+		System.out.println(rightMap.values().size());
 
-		int j = 0;
+//		int j = 0;
 		for(int i = 0; i < 256; i++){
-			List<Gate> leftList = leftMap.get(i);
+			Collection<Gate> leftList = leftMap.getCollection(i);
+			System.out.println(leftList);
 			if(leftList == null){
 				continue;
 			}
 			for(Gate g: leftList){
-				j++;
-				System.out.println(j);
-				evalGate(g, 0, leftMap, rightMap, layersOfGates);
+//				j++;
+//				System.out.println(j);
+				evalGate(g, 0, layersOfGates);
 			}
 		}
-		System.out.println("-------");
-		int k = 0;
+//		System.out.println("-------");
+//		int k = 0;
 		for(int i = 0; i < 256; i++){
-			List<Gate> rightList = rightMap.get(i);
+			Collection<Gate> rightList = rightMap.getCollection(i);
 			if(rightList == null){
 				continue;
 			}
+			System.out.println(rightList);
 			for(Gate g: rightList){
-				k++;
-				System.out.println(k);
-				evalGate(g, 0, leftMap, rightMap, layersOfGates);
+//				k++;
+//				System.out.println(k);
+				evalGate(g, 0, layersOfGates);
 			}
 		}
 		return layersOfGates;
@@ -156,16 +170,15 @@ public class CircuitSorter implements Runnable {
 	 * @param list
 	 * @param layersOfGates
 	 */
-	private void evalGate(Gate g, int time, MultiHashMap leftMap, MultiHashMap rightMap,
-			List<List<Gate>> layersOfGates) {
+	private void evalGate(Gate g, int time, List<List<Gate>> layersOfGates) {
 		g.decCounter();
 		if (g.getCounter() == 0){
 			g.setTime(time);
 			addToSublist(g, layersOfGates);
-			List<Gate> outputGates = getOutputGates(g, leftMap, rightMap);
+			List<Gate> outputGates = getOutputGates(g);
 
 			for(Gate outputGate: outputGates){
-				evalGate(outputGate, time + 1, leftMap, rightMap, layersOfGates);
+				evalGate(outputGate, time + 1, layersOfGates);
 			}
 		} 
 	}
@@ -175,12 +188,11 @@ public class CircuitSorter implements Runnable {
 	 * @param sortedList
 	 * @return
 	 */
-	private List<Gate> getOutputGates(Gate g, MultiHashMap leftMap, 
-			MultiHashMap rightMap){
+	private List<Gate> getOutputGates(Gate g){
 		List<Gate> res = new ArrayList<Gate>();
 		int inputIndex = g.getOutputWireIndex();
-		List<Gate> leftList = leftMap.get(inputIndex);
-		List<Gate> rightList = rightMap.get(inputIndex);
+		Collection<Gate> leftList = leftMap.getCollection(inputIndex);
+		Collection<Gate> rightList = rightMap.getCollection(inputIndex);
 
 		if (leftList != null){
 			res.addAll(leftList);
@@ -199,15 +211,13 @@ public class CircuitSorter implements Runnable {
 	 * @return
 	 */
 	private List<List<Gate>> addToSublist(Gate g, List<List<Gate>> gates){
-		if (gates.size() <= g.getTime()){
-			ArrayList<Gate> l = new ArrayList<Gate>();
-			l.add(g);
-			gates.add(l);
+		
+		while(gates.size() <= g.getTime()){
+			gates.add(new ArrayList<Gate>());
 		}
-		else{
-			List<Gate> l = gates.get(g.getTime());
-			l.add(g);
-		}
+		
+		List<Gate> layer = gates.get(g.getTime());
+		layer.add(g);
 
 		return gates;
 	}
