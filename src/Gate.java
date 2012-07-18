@@ -24,7 +24,7 @@ public class Gate {
 		gate = split[5].replaceFirst("^0*", ""); //Removes leading 0's
 		gateNumber = -1;
 	}
-	
+
 	public int getLeftWireIndex(){
 		return leftWireIndex;
 	}
@@ -32,7 +32,7 @@ public class Gate {
 	public int getRightWireIndex(){
 		return rightWireIndex;
 	}
-	
+
 	public int getOutputWireIndex(){
 		return outputWireIndex;
 	}
@@ -40,15 +40,15 @@ public class Gate {
 	public int getCounter(){
 		return counter;
 	}
-	
+
 	public void decCounter(){
 		counter--;
 	}
-	
+
 	public int getTime(){
 		return time;
 	}
-	
+
 	public void setTime(int time){
 		this.time = Math.max(this.time, time);
 	}
@@ -61,7 +61,7 @@ public class Gate {
 		return getGateNumber() + " " + getLeftWireIndex() + " " + getRightWireIndex() +
 				" " + getOutputWireIndex() + " " + getGate();
 	}
-	
+
 	public boolean isXOR(){
 		if (gate.matches("110")){
 			return true;

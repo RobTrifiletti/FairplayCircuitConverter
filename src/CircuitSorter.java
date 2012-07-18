@@ -26,34 +26,28 @@ public class CircuitSorter implements Runnable {
 	private int numberOfBobInputs = 0;
 	private int numberOfNonXORGates = 0;
 
+	private MultiHashMap leftMap;
+	private MultiHashMap rightMap;
+
 	/**
 	 * @param inputfileName
 	 * @param outputfileName
 	 */
-	public CircuitSorter(String inputfileName, String outputfileName) {
+	public CircuitSorter(File inputFile, File outputFile) {
+		this.inputFile = inputFile;
+		this.outputFile = outputFile;
 		charset = Charset.defaultCharset();
-		this.inputFile = new File(inputfileName);
-		if (!inputFile.exists()){
-			System.out.println("Inputfile: " + inputfileName + " not found");
-			return;
-		}
-		this.outputFile = new File(outputfileName);
+		leftMap = new MultiHashMap();
+		rightMap = new MultiHashMap();
 	}
 
 	public void run() {
 		long startTime = System.currentTimeMillis();
-		List<Gate> gates = getParsedGates(inputFile, charset);
+		List<Gate> gates = getParsedGates();
 
-		MultiHashMap leftMap = new MultiHashMap();
-		MultiHashMap rightMap = new MultiHashMap();
-		for(Gate g: gates){
-			leftMap.put(g.getLeftWireIndex(), g);
-			rightMap.put(g.getRightWireIndex(), g);
-		}
+		List<List<Gate>> layersOfGates = getLayersOfGates(gates);
 
-		List<List<Gate>> multiTimedGates = getTimestampedGates(leftMap, rightMap);
-
-		outputSortedGates(multiTimedGates);
+		outputSortedGates(layersOfGates);
 		System.out.println("Took: " + ((System.currentTimeMillis() - startTime) / 1000)
 				+ " sec");
 	}
@@ -63,7 +57,7 @@ public class CircuitSorter implements Runnable {
 	 * @param charset
 	 * @return
 	 */
-	private List<Gate> getParsedGates(File inputFile, Charset charset) {
+	public List<Gate> getParsedGates() {
 		boolean counter = false;
 		ArrayList<Gate> res = new ArrayList<Gate>();
 		try {
@@ -120,9 +114,13 @@ public class CircuitSorter implements Runnable {
 	 * @param sortedRight
 	 * @return
 	 */
-	private List<List<Gate>> getTimestampedGates(MultiHashMap leftMap,
-			MultiHashMap rightMap) {
-		List<List<Gate>> multiTimedGates = new ArrayList<List<Gate>>();
+	public List<List<Gate>> getLayersOfGates(List<Gate> gates) {
+		List<List<Gate>> layersOfGates = new ArrayList<List<Gate>>();
+
+		for(Gate g: gates){
+			leftMap.put(g.getLeftWireIndex(), g);
+			rightMap.put(g.getRightWireIndex(), g);
+		}
 
 		int j = 0;
 		for(int i = 0; i < 256; i++){
@@ -133,7 +131,7 @@ public class CircuitSorter implements Runnable {
 			for(Gate g: leftList){
 				j++;
 				System.out.println(j);
-				evalGate(g, 0, leftMap, rightMap, multiTimedGates);
+				evalGate(g, 0, leftMap, rightMap, layersOfGates);
 			}
 		}
 		System.out.println("-------");
@@ -146,28 +144,28 @@ public class CircuitSorter implements Runnable {
 			for(Gate g: rightList){
 				k++;
 				System.out.println(k);
-				evalGate(g, 0, leftMap, rightMap, multiTimedGates);
+				evalGate(g, 0, leftMap, rightMap, layersOfGates);
 			}
 		}
-		return multiTimedGates;
+		return layersOfGates;
 	}
 
 	/**
 	 * @param g
 	 * @param time
 	 * @param list
-	 * @param multiTimedGates
+	 * @param layersOfGates
 	 */
 	private void evalGate(Gate g, int time, MultiHashMap leftMap, MultiHashMap rightMap,
-			List<List<Gate>> multiTimedGates) {
+			List<List<Gate>> layersOfGates) {
 		g.decCounter();
 		if (g.getCounter() == 0){
 			g.setTime(time);
-			addToSublist(g, multiTimedGates);
+			addToSublist(g, layersOfGates);
 			List<Gate> outputGates = getOutputGates(g, leftMap, rightMap);
 
 			for(Gate outputGate: outputGates){
-				evalGate(outputGate, time + 1, leftMap, rightMap, multiTimedGates);
+				evalGate(outputGate, time + 1, leftMap, rightMap, layersOfGates);
 			}
 		} 
 	}
@@ -200,7 +198,7 @@ public class CircuitSorter implements Runnable {
 	 * @param gates
 	 * @return
 	 */
-	public List<List<Gate>> addToSublist(Gate g, List<List<Gate>> gates){
+	private List<List<Gate>> addToSublist(Gate g, List<List<Gate>> gates){
 		if (gates.size() <= g.getTime()){
 			ArrayList<Gate> l = new ArrayList<Gate>();
 			l.add(g);
@@ -217,46 +215,26 @@ public class CircuitSorter implements Runnable {
 	/**
 	 * @param multiTimedGates
 	 */
-	private void outputSortedGates(List<List<Gate>> multiTimedGates) {
+	private void outputSortedGates(List<List<Gate>> sortedGates) {
 		BufferedWriter fbw = null;
 		try {
 			fbw = new BufferedWriter(new OutputStreamWriter(
 					new FileOutputStream(outputFile), charset));
-
-			int numberOfTotalInputs = numberOfAliceInputs + numberOfBobInputs;
-			int numberOfTotalOutputs = numberOfTotalInputs/2;
-			int numberOfWires = getNumberOfWires(multiTimedGates);
-			int numberOfLayers = multiTimedGates.size();
-
-			int maxLayerWidth = 0;
-
-			/*
-			 * We have to figure out the max layer size before writing to the file.
-			 */
-			for(List<Gate> l: multiTimedGates){
-				maxLayerWidth = Math.max(maxLayerWidth, l.size());
-			}
-
-			/*
-			 * Build and write the header of the output file
-			 */
-			String header = numberOfTotalInputs + " " + numberOfTotalOutputs + " " +
-					numberOfWires + " " + numberOfLayers + " " + maxLayerWidth +
-					" " + numberOfNonXORGates;
+			String header = getHeader(sortedGates);
 			fbw.write(header);
 			fbw.newLine();
 
 			/*
 			 * Write the gates the the file, one layer at a time
 			 */
-			for(List<Gate> l: multiTimedGates){
+			for(List<Gate> l: sortedGates){
 				// Write the size of the current layer
 				fbw.write("*" + l.size()); 
 				fbw.newLine();
 
 				// Write the gates in this layer
 				for(Gate g: l){
-					String gateString = multiTimedGates.indexOf(l) + " " + g.toString();
+					String gateString = sortedGates.indexOf(l) + " " + g.toString();
 					fbw.write(gateString);
 					fbw.newLine();
 				}
@@ -291,6 +269,31 @@ public class CircuitSorter implements Runnable {
 		return hs.size();
 	}
 
+	public String getHeader(List<List<Gate>> sortedGates){
+		int numberOfTotalInputs = numberOfAliceInputs + numberOfBobInputs;
+		int numberOfTotalOutputs = numberOfTotalInputs/2;
+		int numberOfWires = getNumberOfWires(sortedGates);
+		int numberOfLayers = sortedGates.size();
+
+		int maxLayerWidth = 0;
+
+		/*
+		 * We have to figure out the max layer size before writing to the file.
+		 */
+		for(List<Gate> l: sortedGates){
+			maxLayerWidth = Math.max(maxLayerWidth, l.size());
+		}
+
+		/*
+		 * Build and write the header of the output file
+		 */
+		String header = numberOfTotalInputs + " " + numberOfTotalOutputs + " " +
+				numberOfWires + " " + numberOfLayers + " " + maxLayerWidth +
+				" " + numberOfNonXORGates;
+
+		return header;
+	}
+
 
 	/**
 	 * @param args
@@ -317,8 +320,16 @@ public class CircuitSorter implements Runnable {
 		if(outputfileName == null) {
 			outputfileName = "out.txt";
 		}
+		File inputFile = new File(inputfileName);
 
-		CircuitSorter sorter = new CircuitSorter(inputfileName, outputfileName);
+		File outputFile = new File(outputfileName);
+
+		if (!inputFile.exists()){
+			System.out.println("Inputfile: " + inputFile.getName() + " not found");
+			return;
+		}
+
+		CircuitSorter sorter = new CircuitSorter(inputFile, outputFile);
 		sorter.run();
 	}
 }
