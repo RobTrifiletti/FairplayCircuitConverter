@@ -14,7 +14,6 @@ import java.util.List;
 
 import org.apache.commons.collections.map.MultiValueMap;
 
-
 /**
  * @author Roberto
  *
@@ -22,22 +21,24 @@ import org.apache.commons.collections.map.MultiValueMap;
 public class CircuitSorter implements Runnable {
 
 	private Charset charset;
-	private File inputFile;
+	private File circuitFile;
 	private File outputFile;
+	private static boolean timed;
 
 	private int numberOfAliceInputs = 0;
 	private int numberOfBobInputs = 0;
+	private int totalNumberOfInputs = 0;
 	private int numberOfNonXORGates = 0;
 
 	private MultiValueMap leftMap;
 	private MultiValueMap rightMap;
 
 	/**
-	 * @param inputfileName
-	 * @param outputfileName
+	 * @param circuitFile
+	 * @param outputFile
 	 */
-	public CircuitSorter(File inputFile, File outputFile) {
-		this.inputFile = inputFile;
+	public CircuitSorter(File circuitFile, File outputFile) {
+		this.circuitFile = circuitFile;
 		this.outputFile = outputFile;
 		charset = Charset.defaultCharset();
 		leftMap = new MultiValueMap();
@@ -46,38 +47,29 @@ public class CircuitSorter implements Runnable {
 
 	public void run() {
 		long startTime = System.currentTimeMillis();
+
 		List<Gate> gates = getParsedGates();
-		System.out.println(gates.size());
-		
-
 		List<List<Gate>> layersOfGates = getLayersOfGates(gates);
-		int i = 0;
-		for(List<Gate> list: layersOfGates){
-			i = i + list.size();
-		}
-		System.out.println(i);
-
 		outputSortedGates(layersOfGates);
-		System.out.println("Took: " + ((System.currentTimeMillis() - startTime) / 1000)
-				+ " sec");
+
+		if(timed == true){
+			System.out.println("The sorting took: " +
+		((System.currentTimeMillis() - startTime) / 1000) + " sec");
+		}
+
 	}
 
 	/**
-	 * @param inputFile
-	 * @param charset
-	 * @return
+	 * @return A list of gates in the given circuitFile
 	 */
 	public List<Gate> getParsedGates() {
 		boolean counter = false;
 		ArrayList<Gate> res = new ArrayList<Gate>();
 		try {
 			BufferedReader fbr = new BufferedReader(new InputStreamReader(
-					new FileInputStream(inputFile), charset));
+					new FileInputStream(circuitFile), charset));
 			String line = "";
 			while((line = fbr.readLine()) != null) {
-				/*
-				 * Ignore blank lines
-				 */
 				if (line.isEmpty()){
 					continue;
 				}
@@ -97,6 +89,8 @@ public class CircuitSorter implements Runnable {
 					String[] split = line.split(" ");
 					numberOfAliceInputs = Integer.parseInt(split[0]);
 					numberOfBobInputs = Integer.parseInt(split[1]);
+					totalNumberOfInputs = numberOfAliceInputs +
+							numberOfBobInputs;
 					counter = false;
 					continue;
 				}
@@ -120,47 +114,55 @@ public class CircuitSorter implements Runnable {
 	}
 
 	/**
-	 * @param sortedLeft
-	 * @param sortedRight
-	 * @return
+	 * @param gates
+	 * @return A lists of lists where each list represents a layer og gates in
+	 * the sorted circuit
 	 */
 	public List<List<Gate>> getLayersOfGates(List<Gate> gates) {
 		List<List<Gate>> layersOfGates = new ArrayList<List<Gate>>();
 
+		/*
+		 * We fill up our auxiliary maps which will help us find gates which are
+		 * depending on a given gate. These Maps are MultiValued, so if two
+		 * elements have the same key a list is created to hold each value associated to this
+		 * key.
+		 */
 		for(Gate g: gates){
 			leftMap.put(g.getLeftWireIndex(), g);
 			rightMap.put(g.getRightWireIndex(), g);
 		}
-		System.out.println(leftMap.values().size());
-		System.out.println(rightMap.values().size());
 
-		//TODO Rewrite code so non-recursive, only look at immedient dependors of your
-		// this child
-//		int j = 0;
-		for(int i = 0; i < 256; i++){
+		/*
+		 * Loop to run through each list in our MultiMap, first runs through all
+		 * gates with left input 0, 1, 2, ..., 255.
+		 * For each of these "input" dependant gates, we visit them recursively
+		 * and set a timestamp on each of these.
+		 */
+		for(int i = 0; i < totalNumberOfInputs; i++){
 			Collection<Gate> leftList = leftMap.getCollection(i);
-			System.out.println(leftList);
 			if(leftList == null){
 				continue;
 			}
 			for(Gate g: leftList){
-//				j++;
-//				System.out.println(j);
-				evalGate(g, 0, layersOfGates);
+				visitGate(g, 0, layersOfGates);
 			}
 		}
-//		System.out.println("-------");
-//		int k = 0;
-		for(int i = 0; i < 256; i++){
+		
+		/*
+		 * Now that we've visited all gates which depends on a left input, we
+		 * do the same for the right input and recursively visit them again.
+		 * When we visit a gate which has already been visited we set a
+		 * timestamp again to be the max og the current time and the timestamp
+		 * of the gate. This value determines which layer the gate is to be
+		 * placed in. 
+		 */
+		for(int i = 0; i < totalNumberOfInputs; i++){
 			Collection<Gate> rightList = rightMap.getCollection(i);
 			if(rightList == null){
 				continue;
 			}
-			System.out.println(rightList);
 			for(Gate g: rightList){
-//				k++;
-//				System.out.println(k);
-				evalGate(g, 0, layersOfGates);
+				layersOfGates = visitGate(g, 0, layersOfGates);
 			}
 		}
 		return layersOfGates;
@@ -169,26 +171,25 @@ public class CircuitSorter implements Runnable {
 	/**
 	 * @param g
 	 * @param time
-	 * @param list
 	 * @param layersOfGates
+	 * @return A list of lists representing each layer in the sorted circuit
 	 */
-	private void evalGate(Gate g, int time, List<List<Gate>> layersOfGates) {
+	private List<List<Gate>> visitGate(Gate g, int time, List<List<Gate>> layersOfGates) {
 		g.decCounter();
+		g.setTime(time);
 		if (g.getCounter() == 0){
 			g.setTime(time);
 			addToSublist(g, layersOfGates);
-			List<Gate> outputGates = getOutputGates(g);
-
-			for(Gate outputGate: outputGates){
-				evalGate(outputGate, time + 1, layersOfGates);
+			for(Gate outputGate: getOutputGates(g)){
+				visitGate(outputGate, g.getTime() + 1, layersOfGates);
 			}
-		} 
+		}
+		return layersOfGates;
 	}
 
 	/**
 	 * @param g
-	 * @param sortedList
-	 * @return
+	 * @return A list of all gates depending directly on the given gate
 	 */
 	private List<Gate> getOutputGates(Gate g){
 		List<Gate> res = new ArrayList<Gate>();
@@ -210,43 +211,45 @@ public class CircuitSorter implements Runnable {
 	/**
 	 * @param g
 	 * @param gates
-	 * @return
+	 * @return A List of lists where the given gate has been added to the
+	 * correct sublists depending on it's timestamp
 	 */
-	private List<List<Gate>> addToSublist(Gate g, List<List<Gate>> gates){
-		
-		while(gates.size() <= g.getTime()){
-			gates.add(new ArrayList<Gate>());
+	private List<List<Gate>> addToSublist(Gate g, List<List<Gate>> layersOfGates){
+
+		while(layersOfGates.size() <= g.getTime()){
+			layersOfGates.add(new ArrayList<Gate>());
 		}
-		
-		List<Gate> layer = gates.get(g.getTime());
+
+		List<Gate> layer = layersOfGates.get(g.getTime());
 		layer.add(g);
 
-		return gates;
+		return layersOfGates;
 	}
 
 	/**
-	 * @param multiTimedGates
+	 * @param layersOfGates
+	 * Writes the given lists of lists to a file
 	 */
-	private void outputSortedGates(List<List<Gate>> sortedGates) {
+	private void outputSortedGates(List<List<Gate>> layersOfGates) {
 		BufferedWriter fbw = null;
 		try {
 			fbw = new BufferedWriter(new OutputStreamWriter(
 					new FileOutputStream(outputFile), charset));
-			String header = getHeader(sortedGates);
+			String header = getHeader(layersOfGates);
 			fbw.write(header);
 			fbw.newLine();
 
 			/*
 			 * Write the gates the the file, one layer at a time
 			 */
-			for(List<Gate> l: sortedGates){
+			for(List<Gate> l: layersOfGates){
 				// Write the size of the current layer
 				fbw.write("*" + l.size()); 
 				fbw.newLine();
 
 				// Write the gates in this layer
 				for(Gate g: l){
-					String gateString = sortedGates.indexOf(l) + " " + g.toString();
+					String gateString = layersOfGates.indexOf(l) + " " + g.toString();
 					fbw.write(gateString);
 					fbw.newLine();
 				}
@@ -261,7 +264,6 @@ public class CircuitSorter implements Runnable {
 				e.printStackTrace();
 			}
 		}
-
 	}
 
 	/**
@@ -282,8 +284,7 @@ public class CircuitSorter implements Runnable {
 	}
 
 	public String getHeader(List<List<Gate>> sortedGates){
-		int numberOfTotalInputs = numberOfAliceInputs + numberOfBobInputs;
-		int numberOfTotalOutputs = numberOfTotalInputs/2;
+		int numberOfTotalOutputs = totalNumberOfInputs/2;
 		int numberOfWires = getNumberOfWires(sortedGates);
 		int numberOfLayers = sortedGates.size();
 
@@ -299,7 +300,7 @@ public class CircuitSorter implements Runnable {
 		/*
 		 * Build and write the header of the output file
 		 */
-		String header = numberOfTotalInputs + " " + numberOfTotalOutputs + " " +
+		String header = totalNumberOfInputs + " " + numberOfTotalOutputs + " " +
 				numberOfWires + " " + numberOfLayers + " " + maxLayerWidth +
 				" " + numberOfNonXORGates;
 
@@ -309,6 +310,11 @@ public class CircuitSorter implements Runnable {
 
 	/**
 	 * @param args
+	 * Should be circuitFile.txt outputfilename.txt
+	 * If no output filename is given, out.txt is chosen by default
+	 * circuitFile.txt must exist on the file system, else error
+	 * Optional: add a -t argument to get the running time of the sorting in
+	 * standard out
 	 */
 	public static void main(String[] args) {
 		if(args.length < 1){
@@ -316,32 +322,40 @@ public class CircuitSorter implements Runnable {
 			return;
 		}
 
-		String inputfileName = null, outputfileName = null;
+		String circuitFilename = null;
+		String outputFilename = null;
 
+		/*
+		 * Parse the arguments
+		 */
 		for(int param = 0; param < args.length; param++){
-			if (inputfileName == null) {
-				inputfileName = args[param];
+			if(args[param].equals("-t")){
+				timed = true;
+			}
+			
+			else if (circuitFilename == null) {
+				circuitFilename = args[param];
 			}
 
-			else if (outputfileName == null) {
-				outputfileName = args[param];
+			else if (outputFilename == null) {
+				outputFilename = args[param];
 			}
 
 			else System.out.println("Unparsed: " + args[param]); 
 		}
-		if(outputfileName == null) {
-			outputfileName = "out.txt";
+		if(outputFilename == null) {
+			outputFilename = "out.txt";
 		}
-		File inputFile = new File(inputfileName);
+		File circuitFile = new File(circuitFilename);
 
-		File outputFile = new File(outputfileName);
+		File outputFile = new File(outputFilename);
 
-		if (!inputFile.exists()){
-			System.out.println("Inputfile: " + inputFile.getName() + " not found");
+		if (!circuitFile.exists()){
+			System.out.println("Inputfile: " + circuitFile.getName() + " not found");
 			return;
 		}
 
-		CircuitSorter sorter = new CircuitSorter(inputFile, outputFile);
+		CircuitSorter sorter = new CircuitSorter(circuitFile, outputFile);
 		sorter.run();
 	}
 }
