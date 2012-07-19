@@ -50,7 +50,7 @@ public class CircuitSorter implements Runnable {
 
 		List<Gate> gates = getParsedGates();
 		List<List<Gate>> layersOfGates = getLayersOfGates(gates);
-		outputSortedGates(layersOfGates);
+		writeOutput(layersOfGates);
 
 		if(timed == true){
 			System.out.println("The sorting took: " +
@@ -98,7 +98,7 @@ public class CircuitSorter implements Runnable {
 				/*
 				 * Parse each gate line and count numberOfNonXORGates
 				 */
-				Gate g = new Gate(line);
+				Gate g = new GateSort(line);
 				if (!g.isXOR()){
 					g.setGateNumber(numberOfNonXORGates);
 					numberOfNonXORGates++;
@@ -230,7 +230,7 @@ public class CircuitSorter implements Runnable {
 	 * @param layersOfGates
 	 * Writes the given lists of lists to a file
 	 */
-	private void outputSortedGates(List<List<Gate>> layersOfGates) {
+	private void writeOutput(List<List<Gate>> layersOfGates) {
 		BufferedWriter fbw = null;
 		try {
 			fbw = new BufferedWriter(new OutputStreamWriter(

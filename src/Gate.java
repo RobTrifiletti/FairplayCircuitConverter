@@ -1,79 +1,27 @@
+public interface Gate {
 
-public class Gate {
+	public abstract int getLeftWireIndex();
 
-	private static final int numberOfInputWires = 2;
+	public abstract int getRightWireIndex();
 
-	private int counter;
-	private int time;
-	private int leftWireIndex;
-	private int rightWireIndex;
-	private int outputWireIndex;
-	private String gate;
-	private int gateNumber;
+	public abstract int getOutputWireIndex();
 
-	public Gate(String s){
+	public abstract int getCounter();
 
-		//Example string: 2 1 96 99 256 0110 
-		String[] split = s.split(" ");
-		counter = numberOfInputWires;
-		time = -1;
-		leftWireIndex = Integer.parseInt(split[2]);
-		rightWireIndex = Integer.parseInt(split[3]);
-		outputWireIndex = Integer.parseInt(split[4]);
+	public abstract void decCounter();
 
-		gate = split[5].replaceFirst("^0*", ""); //Removes leading 0's
-		gateNumber = -1;
-	}
+	public abstract int getTime();
 
-	public int getLeftWireIndex(){
-		return leftWireIndex;
-	}
+	public abstract void setTime(int time);
 
-	public int getRightWireIndex(){
-		return rightWireIndex;
-	}
+	public abstract String getGate();
 
-	public int getOutputWireIndex(){
-		return outputWireIndex;
-	}
+	public abstract String toString();
 
-	public int getCounter(){
-		return counter;
-	}
+	public abstract boolean isXOR();
 
-	public void decCounter(){
-		counter--;
-	}
+	public abstract void setGateNumber(int gateNumber);
 
-	public int getTime(){
-		return time;
-	}
+	public abstract int getGateNumber();
 
-	public void setTime(int time){
-		this.time = Math.max(this.time, time);
-	}
-
-	public String getGate(){
-		return gate;
-	}
-
-	public String toString(){
-		return getGateNumber() + " " + getLeftWireIndex() + " " + getRightWireIndex() +
-				" " + getOutputWireIndex() + " " + getGate();
-	}
-
-	public boolean isXOR(){
-		if (gate.matches("110")){
-			return true;
-		}
-		else return false;
-	}
-
-	public void setGateNumber(int gateNumber){
-		this.gateNumber = gateNumber;
-	}
-
-	public int getGateNumber(){
-		return gateNumber;
-	}
 }
