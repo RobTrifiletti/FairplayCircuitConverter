@@ -1,4 +1,4 @@
 *.class
 /bin/
 .DS_Store
-out.txt
+data/

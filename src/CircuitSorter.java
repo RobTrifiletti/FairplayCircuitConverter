@@ -344,7 +344,7 @@ public class CircuitSorter implements Runnable {
 			else System.out.println("Unparsed: " + args[param]); 
 		}
 		if(outputFilename == null) {
-			outputFilename = "out.txt";
+			outputFilename = "data/out.txt";
 		}
 		File circuitFile = new File(circuitFilename);
 
