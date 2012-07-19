@@ -134,6 +134,8 @@ public class CircuitSorter implements Runnable {
 		System.out.println(leftMap.values().size());
 		System.out.println(rightMap.values().size());
 
+		//TODO Rewrite code so non-recursive, only look at immedient dependors of your
+		// this child
 //		int j = 0;
 		for(int i = 0; i < 256; i++){
 			Collection<Gate> leftList = leftMap.getCollection(i);
