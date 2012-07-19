@@ -132,25 +132,6 @@ public class CircuitSorter implements Runnable {
 			rightMap.put(g.getRightWireIndex(), g);
 		}
 
-<<<<<<< HEAD
-		int i = 0;
-		for(Gate g: sortedLeft){
-			if (g.getLeftWireIndex() < 256){
-				i++;
-				System.out.println(i);
-				evalGate(g, 0, sortedLeft, multiTimedGates);
-			}
-			
-			else continue;
-		}
-		System.out.println("-------------");
-		int j = 0;
-		for(Gate g: sortedRight){
-			if (g.getRightWireIndex() < 256){	
-				j++;
-				System.out.println(j);
-				evalGate(g, 0, sortedRight, multiTimedGates);
-=======
 		/*
 		 * Loop to run through each list in our MultiMap, first runs through all
 		 * gates with left input 0, 1, 2, ..., 255.
@@ -182,7 +163,6 @@ public class CircuitSorter implements Runnable {
 			}
 			for(Gate g: rightList){
 				layersOfGates = visitGate(g, 0, layersOfGates);
->>>>>>> new-timed-gates-approach
 			}
 		}
 		return layersOfGates;
