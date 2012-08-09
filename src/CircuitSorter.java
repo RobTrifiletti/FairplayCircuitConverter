@@ -15,7 +15,7 @@ import java.util.List;
 import org.apache.commons.collections.map.MultiValueMap;
 
 /**
- * @author Roberto
+ * @author Roberto Trifiletti
  *
  */
 public class CircuitSorter implements Runnable {
@@ -45,6 +45,7 @@ public class CircuitSorter implements Runnable {
 		rightMap = new MultiValueMap();
 	}
 
+	@Override
 	public void run() {
 		long startTime = System.currentTimeMillis();
 
