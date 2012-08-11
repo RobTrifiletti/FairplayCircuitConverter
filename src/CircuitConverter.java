@@ -18,7 +18,7 @@ import org.apache.commons.collections.map.MultiValueMap;
  * @author Roberto Trifiletti
  *
  */
-public class CircuitSorter implements Runnable {
+public class CircuitConverter implements Runnable {
 
 	private Charset charset;
 	private File circuitFile;
@@ -37,7 +37,7 @@ public class CircuitSorter implements Runnable {
 	 * @param circuitFile
 	 * @param outputFile
 	 */
-	public CircuitSorter(File circuitFile, File outputFile) {
+	public CircuitConverter(File circuitFile, File outputFile) {
 		this.circuitFile = circuitFile;
 		this.outputFile = outputFile;
 		charset = Charset.defaultCharset();
@@ -54,7 +54,7 @@ public class CircuitSorter implements Runnable {
 		writeOutput(layersOfGates);
 
 		if(timed == true){
-			System.out.println("The sorting took: " +
+			System.out.println("The converting took: " +
 		((System.currentTimeMillis() - startTime) / 1000) + " sec");
 		}
 
@@ -99,7 +99,7 @@ public class CircuitSorter implements Runnable {
 				/*
 				 * Parse each gate line and count numberOfNonXORGates
 				 */
-				Gate g = new GateSort(line);
+				Gate g = new GateConvert(line);
 				if (!g.isXOR()){
 					g.setGateNumber(numberOfNonXORGates);
 					numberOfNonXORGates++;
@@ -116,8 +116,8 @@ public class CircuitSorter implements Runnable {
 
 	/**
 	 * @param gates
-	 * @return A lists of lists where each list represents a layer og gates in
-	 * the sorted circuit
+	 * @return A lists of lists where each list represents a layer of gates in
+	 * the converted circuit
 	 */
 	public List<List<Gate>> getLayersOfGates(List<Gate> gates) {
 		List<List<Gate>> layersOfGates = new ArrayList<List<Gate>>();
@@ -173,7 +173,7 @@ public class CircuitSorter implements Runnable {
 	 * @param g
 	 * @param time
 	 * @param layersOfGates
-	 * @return A list of lists representing each layer in the sorted circuit
+	 * @return A list of lists representing each layer in the converted circuit
 	 */
 	private List<List<Gate>> visitGate(Gate g, int time, List<List<Gate>> layersOfGates) {
 		g.decCounter();
@@ -314,7 +314,7 @@ public class CircuitSorter implements Runnable {
 	 * Should be circuitFile.txt outputfilename.txt
 	 * If no output filename is given, out.txt is chosen by default
 	 * circuitFile.txt must exist on the file system, else error
-	 * Optional: add a -t argument to get the running time of the sorting in
+	 * Optional: add a -t argument to get the running time of the conversion in
 	 * standard out
 	 */
 	public static void main(String[] args) {
@@ -356,7 +356,7 @@ public class CircuitSorter implements Runnable {
 			return;
 		}
 
-		CircuitSorter sorter = new CircuitSorter(circuitFile, outputFile);
-		sorter.run();
+		CircuitConverter converter = new CircuitConverter(circuitFile, outputFile);
+		converter.run();
 	}
 }

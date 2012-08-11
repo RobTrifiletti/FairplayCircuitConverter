@@ -1,5 +1,5 @@
 
-public class GateSort implements Gate {
+public class GateConvert implements Gate {
 
 	private static final int numberOfInputWires = 2;
 
@@ -11,7 +11,7 @@ public class GateSort implements Gate {
 	private String gate;
 	private int gateNumber;
 
-	public GateSort(String s){
+	public GateConvert(String s){
 
 		//Example string: 2 1 96 99 256 0110 
 		String[] split = s.split(" ");
