@@ -23,7 +23,7 @@ public class CircuitConverter implements Runnable {
 	private MultiValueMap leftMap;
 	private MultiValueMap rightMap;
 	
-	private FairplayParser fpp;
+	private CircuitParseStrategy<Gate> circuitParser;
 
 	/**
 	 * @param circuitFile
@@ -33,7 +33,7 @@ public class CircuitConverter implements Runnable {
 		this.outputFile = outputFile;
 		this.timed = timed;
 		charset = Charset.defaultCharset();
-		fpp = new FairplayParserImpl(circuitFile, charset);
+		circuitParser = new CircuitParseStrategyImpl<Gate>(circuitFile, charset);
 		
 		leftMap = new MultiValueMap();
 		rightMap = new MultiValueMap();
@@ -43,7 +43,7 @@ public class CircuitConverter implements Runnable {
 	public void run() {
 		long startTime = System.currentTimeMillis();
 
-		List<Gate> gates = fpp.getParsedGates();
+		List<Gate> gates = circuitParser.getParsedGates();
 		List<List<Gate>> layersOfGates = getLayersOfGates(gates);
 		
 		writeOutput(layersOfGates);
@@ -75,7 +75,7 @@ public class CircuitConverter implements Runnable {
 			rightMap.put(g.getRightWireIndex(), g);
 		}
 
-		int totalNumberOfInputs = fpp.getTotalNumberOfInputs();
+		int totalNumberOfInputs = circuitParser.getTotalNumberOfInputs();
 		/*
 		 * Loop to run through each list in our MultiMap, first runs through all
 		 * gates with left input 0, 1, 2, ..., 255.
@@ -180,7 +180,7 @@ public class CircuitConverter implements Runnable {
 		try {
 			fbw = new BufferedWriter(new OutputStreamWriter(
 					new FileOutputStream(outputFile), charset));
-			int[] intHeaders = fpp.getHeader(layersOfGates);
+			int[] intHeaders = circuitParser.getHeader(layersOfGates);
 			String header = "";
 			
 			for (int i = 0; i < intHeaders.length; i++){
