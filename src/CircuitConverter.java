@@ -23,7 +23,7 @@ public class CircuitConverter implements Runnable {
 	private Charset charset;
 	private File circuitFile;
 	private File outputFile;
-	private static boolean timed;
+	private boolean timed;
 
 	private int numberOfAliceInputs = 0;
 	private int numberOfBobInputs = 0;
@@ -37,9 +37,10 @@ public class CircuitConverter implements Runnable {
 	 * @param circuitFile
 	 * @param outputFile
 	 */
-	public CircuitConverter(File circuitFile, File outputFile) {
+	public CircuitConverter(File circuitFile, File outputFile, boolean timed) {
 		this.circuitFile = circuitFile;
 		this.outputFile = outputFile;
+		this.timed = timed;
 		charset = Charset.defaultCharset();
 		leftMap = new MultiValueMap();
 		rightMap = new MultiValueMap();
@@ -119,6 +120,7 @@ public class CircuitConverter implements Runnable {
 	 * @return A lists of lists where each list represents a layer of gates in
 	 * the converted circuit
 	 */
+	@SuppressWarnings("unchecked")
 	public List<List<Gate>> getLayersOfGates(List<Gate> gates) {
 		List<List<Gate>> layersOfGates = new ArrayList<List<Gate>>();
 
@@ -192,6 +194,7 @@ public class CircuitConverter implements Runnable {
 	 * @param g
 	 * @return A list of all gates depending directly on the given gate
 	 */
+	@SuppressWarnings("unchecked")
 	private List<Gate> getOutputGates(Gate g){
 		List<Gate> res = new ArrayList<Gate>();
 		int inputIndex = g.getOutputWireIndex();
@@ -306,57 +309,5 @@ public class CircuitConverter implements Runnable {
 				" " + numberOfNonXORGates;
 
 		return header;
-	}
-
-
-	/**
-	 * @param args
-	 * Should be circuitFile.txt outputfilename.txt
-	 * If no output filename is given, out.txt is chosen by default
-	 * circuitFile.txt must exist on the file system, else error
-	 * Optional: add a -t argument to get the running time of the conversion in
-	 * standard out
-	 */
-	public static void main(String[] args) {
-		if(args.length < 1){
-			System.out.println("Incorrect number of arguments, please specify inputfile");
-			return;
-		}
-
-		String circuitFilename = null;
-		String outputFilename = null;
-
-		/*
-		 * Parse the arguments
-		 */
-		for(int param = 0; param < args.length; param++){
-			if(args[param].equals("-t")){
-				timed = true;
-			}
-			
-			else if (circuitFilename == null) {
-				circuitFilename = args[param];
-			}
-
-			else if (outputFilename == null) {
-				outputFilename = args[param];
-			}
-
-			else System.out.println("Unparsed: " + args[param]); 
-		}
-		if(outputFilename == null) {
-			outputFilename = "data/out.txt";
-		}
-		File circuitFile = new File(circuitFilename);
-
-		File outputFile = new File(outputFilename);
-
-		if (!circuitFile.exists()){
-			System.out.println("Inputfile: " + circuitFile.getName() + " not found");
-			return;
-		}
-
-		CircuitConverter converter = new CircuitConverter(circuitFile, outputFile);
-		converter.run();
 	}
 }
