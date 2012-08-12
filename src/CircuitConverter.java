@@ -1,15 +1,11 @@
-import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.List;
 
 import org.apache.commons.collections.map.MultiValueMap;
@@ -21,27 +17,24 @@ import org.apache.commons.collections.map.MultiValueMap;
 public class CircuitConverter implements Runnable {
 
 	private Charset charset;
-	private File circuitFile;
 	private File outputFile;
 	private boolean timed;
 
-	private int numberOfAliceInputs = 0;
-	private int numberOfBobInputs = 0;
-	private int totalNumberOfInputs = 0;
-	private int numberOfNonXORGates = 0;
-
 	private MultiValueMap leftMap;
 	private MultiValueMap rightMap;
+	
+	private FairplayParser fpp;
 
 	/**
 	 * @param circuitFile
 	 * @param outputFile
 	 */
 	public CircuitConverter(File circuitFile, File outputFile, boolean timed) {
-		this.circuitFile = circuitFile;
 		this.outputFile = outputFile;
 		this.timed = timed;
 		charset = Charset.defaultCharset();
+		fpp = new FairplayParserImpl(circuitFile, charset);
+		
 		leftMap = new MultiValueMap();
 		rightMap = new MultiValueMap();
 	}
@@ -50,8 +43,9 @@ public class CircuitConverter implements Runnable {
 	public void run() {
 		long startTime = System.currentTimeMillis();
 
-		List<Gate> gates = getParsedGates();
+		List<Gate> gates = fpp.getParsedGates();
 		List<List<Gate>> layersOfGates = getLayersOfGates(gates);
+		
 		writeOutput(layersOfGates);
 
 		if(timed == true){
@@ -59,60 +53,6 @@ public class CircuitConverter implements Runnable {
 		((System.currentTimeMillis() - startTime) / 1000) + " sec");
 		}
 
-	}
-
-	/**
-	 * @return A list of gates in the given circuitFile
-	 */
-	public List<Gate> getParsedGates() {
-		boolean counter = false;
-		ArrayList<Gate> res = new ArrayList<Gate>();
-		try {
-			BufferedReader fbr = new BufferedReader(new InputStreamReader(
-					new FileInputStream(circuitFile), charset));
-			String line = "";
-			while((line = fbr.readLine()) != null) {
-				if (line.isEmpty()){
-					continue;
-				}
-
-				/*
-				 * Ignore meta-data info, we don't need it
-				 */
-				if(line.matches("[0-9]* [0-9]*")){
-					counter = true;
-					continue;
-				}
-
-				/*
-				 * Parse number of input bits
-				 */
-				if (counter == true){
-					String[] split = line.split(" ");
-					numberOfAliceInputs = Integer.parseInt(split[0]);
-					numberOfBobInputs = Integer.parseInt(split[1]);
-					totalNumberOfInputs = numberOfAliceInputs +
-							numberOfBobInputs;
-					counter = false;
-					continue;
-				}
-
-				/*
-				 * Parse each gate line and count numberOfNonXORGates
-				 */
-				Gate g = new GateConvert(line);
-				if (!g.isXOR()){
-					g.setGateNumber(numberOfNonXORGates);
-					numberOfNonXORGates++;
-				}
-				res.add(g);
-			}
-			fbr.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
-		return res;
 	}
 
 	/**
@@ -135,6 +75,7 @@ public class CircuitConverter implements Runnable {
 			rightMap.put(g.getRightWireIndex(), g);
 		}
 
+		int totalNumberOfInputs = fpp.getTotalNumberOfInputs();
 		/*
 		 * Loop to run through each list in our MultiMap, first runs through all
 		 * gates with left input 0, 1, 2, ..., 255.
@@ -239,7 +180,15 @@ public class CircuitConverter implements Runnable {
 		try {
 			fbw = new BufferedWriter(new OutputStreamWriter(
 					new FileOutputStream(outputFile), charset));
-			String header = getHeader(layersOfGates);
+			int[] intHeaders = fpp.getHeader(layersOfGates);
+			String header = "";
+			
+			for (int i = 0; i < intHeaders.length; i++){
+				header += (intHeaders[i] + "");
+				if (i != intHeaders.length - 1){
+					header += " ";
+				}
+			}
 			fbw.write(header);
 			fbw.newLine();
 
@@ -268,46 +217,5 @@ public class CircuitConverter implements Runnable {
 				e.printStackTrace();
 			}
 		}
-	}
-
-	/**
-	 * @param multiTimedGates
-	 * @return
-	 */
-	private int getNumberOfWires(List<List<Gate>> multiTimedGates) {
-		HashSet<Integer> hs = new HashSet<Integer>();
-		for(List<Gate> l: multiTimedGates){
-			for(Gate g: l){
-				hs.add(g.getLeftWireIndex());
-				hs.add(g.getRightWireIndex());
-				hs.add(g.getOutputWireIndex());
-			}
-		}
-
-		return hs.size();
-	}
-
-	public String getHeader(List<List<Gate>> sortedGates){
-		int numberOfTotalOutputs = totalNumberOfInputs/2;
-		int numberOfWires = getNumberOfWires(sortedGates);
-		int numberOfLayers = sortedGates.size();
-
-		int maxLayerWidth = 0;
-
-		/*
-		 * We have to figure out the max layer size before writing to the file.
-		 */
-		for(List<Gate> l: sortedGates){
-			maxLayerWidth = Math.max(maxLayerWidth, l.size());
-		}
-
-		/*
-		 * Build and write the header of the output file
-		 */
-		String header = totalNumberOfInputs + " " + numberOfTotalOutputs + " " +
-				numberOfWires + " " + numberOfLayers + " " + maxLayerWidth +
-				" " + numberOfNonXORGates;
-
-		return header;
 	}
 }
