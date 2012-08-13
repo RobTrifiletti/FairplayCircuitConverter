@@ -180,7 +180,7 @@ public class CircuitConverter implements Runnable {
 		try {
 			fbw = new BufferedWriter(new OutputStreamWriter(
 					new FileOutputStream(outputFile), charset));
-			int[] intHeaders = circuitParser.getHeader(layersOfGates);
+			int[] intHeaders = circuitParser.getOutputHeader(layersOfGates);
 			String header = "";
 			
 			for (int i = 0; i < intHeaders.length; i++){

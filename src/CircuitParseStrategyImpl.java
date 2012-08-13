@@ -78,7 +78,7 @@ public class CircuitParseStrategyImpl<E> implements CircuitParseStrategy<Gate> {
 		return res;
 	}
 
-	public int[] getHeader(List<List<Gate>> sortedGates){
+	public int[] getOutputHeader(List<List<Gate>> sortedGates){
 		int numberOfTotalOutputs = totalNumberOfInputs/2;
 		int numberOfWires = getNumberOfWires(sortedGates);
 		int numberOfLayers = sortedGates.size();
