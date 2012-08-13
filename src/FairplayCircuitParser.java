@@ -9,7 +9,7 @@ import java.util.HashSet;
 import java.util.List;
 
 
-public class CircuitParseStrategyImpl<E> implements CircuitParseStrategy<Gate> {
+public class FairplayCircuitParser {
 
 	private File circuitFile;
 	private Charset charset;
@@ -18,7 +18,7 @@ public class CircuitParseStrategyImpl<E> implements CircuitParseStrategy<Gate> {
 	private int numberOfNonXORGates;
 	private int totalNumberOfInputs;
 
-	public CircuitParseStrategyImpl(File circuitFile, Charset charset){
+	public FairplayCircuitParser(File circuitFile, Charset charset){
 
 		this.circuitFile = circuitFile;
 		this.charset = charset;

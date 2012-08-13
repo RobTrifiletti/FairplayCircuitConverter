@@ -23,7 +23,7 @@ public class CircuitConverter implements Runnable {
 	private MultiValueMap leftMap;
 	private MultiValueMap rightMap;
 	
-	private CircuitParseStrategy<Gate> circuitParser;
+	private FairplayCircuitParser circuitParser;
 
 	/**
 	 * @param circuitFile
@@ -33,7 +33,7 @@ public class CircuitConverter implements Runnable {
 		this.outputFile = outputFile;
 		this.timed = timed;
 		charset = Charset.defaultCharset();
-		circuitParser = new CircuitParseStrategyImpl<Gate>(circuitFile, charset);
+		circuitParser = new FairplayCircuitParser(circuitFile, charset);
 		
 		leftMap = new MultiValueMap();
 		rightMap = new MultiValueMap();
@@ -217,5 +217,13 @@ public class CircuitConverter implements Runnable {
 				e.printStackTrace();
 			}
 		}
+	}
+	
+	public List<Gate> getParsedGates(){
+		return circuitParser.getParsedGates();
+	}
+	
+	public int[] getOutputHeader(List<List<Gate>>layersOfGates){
+		return circuitParser.getOutputHeader(layersOfGates);
 	}
 }
