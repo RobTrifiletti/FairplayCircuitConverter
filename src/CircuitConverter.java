@@ -6,6 +6,7 @@ import java.io.OutputStreamWriter;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 
 import org.apache.commons.collections.map.MultiValueMap;
@@ -22,7 +23,8 @@ public class CircuitConverter implements Runnable {
 
 	private MultiValueMap leftMap;
 	private MultiValueMap rightMap;
-	
+	private HashMap<Integer, Gate> outputMap;
+
 	private FairplayCircuitParser circuitParser;
 
 	/**
@@ -34,9 +36,10 @@ public class CircuitConverter implements Runnable {
 		this.timed = timed;
 		charset = Charset.defaultCharset();
 		circuitParser = new FairplayCircuitParser(circuitFile, charset);
-		
+
 		leftMap = new MultiValueMap();
 		rightMap = new MultiValueMap();
+		outputMap = new HashMap<Integer, Gate>();
 	}
 
 	@Override
@@ -44,13 +47,16 @@ public class CircuitConverter implements Runnable {
 		long startTime = System.currentTimeMillis();
 
 		List<Gate> gates = circuitParser.getParsedGates();
-		List<List<Gate>> layersOfGates = getLayersOfGates(gates);
+		initMaps(gates);
+		removeBlankWires(gates);
 		
+		List<List<Gate>> layersOfGates = getLayersOfGates(gates);
+
 		writeOutput(layersOfGates);
 
 		if(timed == true){
 			System.out.println("The converting took: " +
-		((System.currentTimeMillis() - startTime) / 1000) + " sec");
+					((System.currentTimeMillis() - startTime) / 1000) + " sec");
 		}
 
 	}
@@ -63,17 +69,6 @@ public class CircuitConverter implements Runnable {
 	@SuppressWarnings("unchecked")
 	public List<List<Gate>> getLayersOfGates(List<Gate> gates) {
 		List<List<Gate>> layersOfGates = new ArrayList<List<Gate>>();
-
-		/*
-		 * We fill up our auxiliary maps which will help us find gates which are
-		 * depending on a given gate. These Maps are MultiValued, so if two
-		 * elements have the same key a list is created to hold each value associated to this
-		 * key.
-		 */
-		for(Gate g: gates){
-			leftMap.put(g.getLeftWireIndex(), g);
-			rightMap.put(g.getRightWireIndex(), g);
-		}
 
 		int totalNumberOfInputs = circuitParser.getTotalNumberOfInputs();
 		/*
@@ -91,7 +86,7 @@ public class CircuitConverter implements Runnable {
 				visitGate(g, 0, layersOfGates);
 			}
 		}
-		
+
 		/*
 		 * Now that we've visited all gates which depends on a left input, we
 		 * do the same for the right input and recursively visit them again.
@@ -110,6 +105,48 @@ public class CircuitConverter implements Runnable {
 			}
 		}
 		return layersOfGates;
+	}
+
+	/*
+	 * We fill up our auxiliary maps which will help us find gates which are
+	 * depending on a given gate. These Maps are MultiValued, so if two
+	 * elements have the same key a list is created to hold each value associated to this
+	 * key.
+	 */
+	private void initMaps(List<Gate> gates){
+		for(Gate g: gates){
+			leftMap.put(g.getLeftWireIndex(), g);
+			rightMap.put(g.getRightWireIndex(), g);
+			outputMap.put(g.getOutputWireIndex(), g);
+		}
+	}
+	
+	/**
+	 * Assumes the inputFile is not sorted by outputWire. If this is the case,
+	 * this code can be greatly optimized.
+	 * @param gates
+	 */
+	private void removeBlankWires(List<Gate> gates){
+		
+		// false means blank
+		boolean[] blankWires = circuitParser.getBlankWires();
+		int numberOfWires = circuitParser.getNumberOfWires();
+
+		// Runs from top to bottom, decrementing the appropriate wires
+		for(int i =  numberOfWires - 1; i >= 0; i--){
+			boolean b = blankWires[i];
+			if(!b){
+				for(int j = i; j < numberOfWires; j++){
+					Gate g = outputMap.get(j);
+					if(g != null){
+						int outputIndex = g.getOutputWireIndex();
+						g = gates.get(gates.indexOf(g));
+						g.setOutputWireIndex(outputIndex - 1);
+					}
+
+				}
+			}
+		}
 	}
 
 	/**
@@ -182,7 +219,7 @@ public class CircuitConverter implements Runnable {
 					new FileOutputStream(outputFile), charset));
 			int[] intHeaders = circuitParser.getOutputHeader(layersOfGates);
 			String header = "";
-			
+
 			for (int i = 0; i < intHeaders.length; i++){
 				header += (intHeaders[i] + "");
 				if (i != intHeaders.length - 1){
@@ -218,11 +255,11 @@ public class CircuitConverter implements Runnable {
 			}
 		}
 	}
-	
+
 	public List<Gate> getParsedGates(){
 		return circuitParser.getParsedGates();
 	}
-	
+
 	public int[] getOutputHeader(List<List<Gate>>layersOfGates){
 		return circuitParser.getOutputHeader(layersOfGates);
 	}

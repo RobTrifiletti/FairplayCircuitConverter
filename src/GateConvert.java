@@ -124,4 +124,21 @@ public class GateConvert implements Gate {
 	public int getGateNumber(){
 		return gateNumber;
 	}
+
+	@Override
+	public void setLeftWireIndex(int index) {
+		leftWireIndex = index;
+		
+	}
+
+	@Override
+	public void setRightWireIndex(int index) {
+		rightWireIndex = index;
+	}
+
+	@Override
+	public void setOutputWireIndex(int index) {
+		outputWireIndex = index;
+		
+	}
 }

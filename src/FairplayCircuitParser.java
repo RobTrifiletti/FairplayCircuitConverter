@@ -13,13 +13,14 @@ public class FairplayCircuitParser {
 
 	private File circuitFile;
 	private Charset charset;
+	private int numberOfWires;
+	private boolean[] blankWires;
 	private int numberOfAliceInputs;
 	private int numberOfBobInputs;
 	private int numberOfNonXORGates;
 	private int totalNumberOfInputs;
 
 	public FairplayCircuitParser(File circuitFile, Charset charset){
-
 		this.circuitFile = circuitFile;
 		this.charset = charset;
 	}
@@ -40,9 +41,12 @@ public class FairplayCircuitParser {
 				}
 
 				/*
-				 * Ignore meta-data info, we don't need it
+				 * Parse meta-data info
 				 */
 				if(line.matches("[0-9]* [0-9]*")){
+					String[] sizeInfo = line.split(" ");
+					numberOfWires = Integer.parseInt(sizeInfo[1]);
+					blankWires = new boolean[numberOfWires];
 					counter = true;
 					continue;
 				}
@@ -64,6 +68,10 @@ public class FairplayCircuitParser {
 				 * Parse each gate line and count numberOfNonXORGates
 				 */
 				Gate g = new GateConvert(line);
+				blankWires[g.getLeftWireIndex()] = true;
+				blankWires[g.getRightWireIndex()] = true;
+				blankWires[g.getOutputWireIndex()] = true;
+				
 				if (!g.isXOR()){
 					g.setGateNumber(numberOfNonXORGates);
 					numberOfNonXORGates++;
@@ -107,6 +115,14 @@ public class FairplayCircuitParser {
 
 	public int getTotalNumberOfInputs(){
 		return totalNumberOfInputs;
+	}
+	
+	public int getNumberOfWires(){
+		return numberOfWires;
+	}
+	
+	public boolean[] getBlankWires(){
+		return blankWires;
 	}
 
 	/**

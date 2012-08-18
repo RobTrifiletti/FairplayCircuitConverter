@@ -1,10 +1,16 @@
 public interface Gate {
 
 	public int getLeftWireIndex();
+	
+	public void setLeftWireIndex(int index);
 
 	public int getRightWireIndex();
+	
+	public void setRightWireIndex(int index);
 
 	public int getOutputWireIndex();
+	
+	public void setOutputWireIndex(int index);
 
 	public int getCounter();
 
