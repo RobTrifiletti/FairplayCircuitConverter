@@ -143,7 +143,6 @@ public class CircuitConverter implements Runnable {
 						g = gates.get(gates.indexOf(g));
 						g.setOutputWireIndex(outputIndex - 1);
 					}
-
 				}
 			}
 		}
