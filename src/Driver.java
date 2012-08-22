@@ -17,6 +17,7 @@ public class Driver {
 		}
 
 		boolean timed = false;
+		boolean sorted = false;
 		String circuitFilename = null;
 		String outputFilename = null;
 
@@ -26,6 +27,9 @@ public class Driver {
 		for(int param = 0; param < args.length; param++){
 			if(args[param].equals("-t")){
 				timed = true;
+			}
+			if(args[param].equals("-s")){
+				sorted = true;
 			}
 			
 			else if (circuitFilename == null) {
@@ -51,7 +55,7 @@ public class Driver {
 		}
 
 		CircuitConverter converter = 
-				new CircuitConverter(circuitFile, outputFile, timed);
+				new CircuitConverter(circuitFile, outputFile, timed, sorted);
 		converter.run();
 	}
 }

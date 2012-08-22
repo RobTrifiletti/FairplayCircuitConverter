@@ -17,9 +17,12 @@ import org.apache.commons.collections.map.MultiValueMap;
  */
 public class CircuitConverter implements Runnable {
 
+	private static final int NEW_LAYER_THRESHOLD = 0;
+	
 	private Charset charset;
 	private File outputFile;
 	private boolean timed;
+	private boolean sorted;
 
 	private MultiValueMap leftMap;
 	private MultiValueMap rightMap;
@@ -31,9 +34,11 @@ public class CircuitConverter implements Runnable {
 	 * @param circuitFile
 	 * @param outputFile
 	 */
-	public CircuitConverter(File circuitFile, File outputFile, boolean timed) {
+	public CircuitConverter(File circuitFile, File outputFile, boolean timed,
+			boolean sorted) {
 		this.outputFile = outputFile;
 		this.timed = timed;
+		this.sorted = sorted;
 		charset = Charset.defaultCharset();
 		circuitParser = new FairplayCircuitParser(circuitFile, charset);
 
@@ -51,12 +56,16 @@ public class CircuitConverter implements Runnable {
 		removeBlankWires(gates);
 
 		List<List<Gate>> layersOfGates = getLayersOfGates(gates);
+		
+		if(sorted){
+			layersOfGates = getXorSortedLayers(layersOfGates);
+		}
 
 		writeOutput(layersOfGates);
 
 		if(timed == true){
 			System.out.println("The converting took: " +
-					((System.currentTimeMillis() - startTime) / 1000) + " sec");
+					((System.currentTimeMillis() - startTime)) + " sec");
 		}
 
 	}
@@ -224,6 +233,38 @@ public class CircuitConverter implements Runnable {
 			res.addAll(rightList);
 		}
 
+		return res;
+	}
+	
+	/**
+	 * 
+	 * @param layersOfGates
+	 * @return A list of lists where all layers either are xor-only or not
+	 * containing any xors at all
+	 */
+	private List<List<Gate>> getXorSortedLayers(List<List<Gate>> layersOfGates) {
+		List<List<Gate>> res = new ArrayList<List<Gate>>();
+		for(List<Gate> l: layersOfGates){
+			List<Gate> xorLayer = new ArrayList<Gate>();
+			List<Gate> nonXorLayer = new ArrayList<Gate>();
+			for(Gate g: l){
+				if(g.isXOR()){
+					xorLayer.add(g);
+				}
+				else nonXorLayer.add(g);
+			}
+			res.add(xorLayer);
+			/**
+			 * Can now adjust how many nonXors there has to be to
+			 * justify creating a new layer
+			 */
+			
+			if(nonXorLayer.size() > NEW_LAYER_THRESHOLD){
+				res.add(nonXorLayer);
+			}
+			else xorLayer.addAll(nonXorLayer);
+			
+		}
 		return res;
 	}
 
